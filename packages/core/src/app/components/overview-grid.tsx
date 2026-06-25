@@ -11,7 +11,8 @@ import type { SlideTransition } from '../lib/transition';
 import { SlideCanvas } from './slide-canvas';
 
 const THUMB_W = 320;
-const THUMB_H = (THUMB_W * CANVAS_HEIGHT) / CANVAS_WIDTH;
+const THUMB_SCALE = THUMB_W / CANVAS_WIDTH;
+const THUMB_H = CANVAS_HEIGHT * THUMB_SCALE;
 
 export type OverviewVariant = 'present' | 'editor';
 
@@ -216,26 +217,20 @@ function OverviewThumb({
       aria-label={format(t.present.overviewGoToAria, { n: index + 1 })}
       aria-current={isCurrent ? 'true' : undefined}
       className={cn(
-        'group/thumb flex flex-col items-start gap-2 rounded-[6px] p-1.5 outline-none transition-colors',
+        'group/thumb flex flex-col items-start gap-2 rounded-[6px] py-1.5 outline-none transition-colors',
         isFocused ? styles.thumbFocused : styles.thumbHover,
       )}
     >
       <div
         ref={boxRef}
         className={cn(
-          'relative w-full overflow-hidden rounded-[4px] ring-1 transition-shadow',
+          'relative shrink-0 overflow-hidden rounded-[4px] ring-1 transition-shadow',
           styles.thumbSurface,
           isFocused ? 'ring-2 ring-[var(--brand,#ef4444)]' : styles.thumbRing,
         )}
-        style={{ height: THUMB_H }}
+        style={{ width: THUMB_W, height: THUMB_H }}
       >
-        <SlideCanvas
-          scale={THUMB_W / CANVAS_WIDTH}
-          center={false}
-          flat
-          freezeMotion
-          design={design}
-        >
+        <SlideCanvas scale={THUMB_SCALE} center={false} flat freezeMotion design={design}>
           <SlidePageProvider index={index} total={total}>
             <PageComp />
           </SlidePageProvider>
