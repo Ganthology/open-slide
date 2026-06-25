@@ -3,6 +3,16 @@ import { useClickPageNavigation } from '@/lib/use-click-page-navigation';
 import { useWheelPageNavigation } from '@/lib/use-wheel-page-navigation';
 import { cn } from '@/lib/utils';
 import type { DesignSystem } from '../lib/design';
+import {
+  countPresentablePages,
+  findFirstPresentableIndex,
+  findLastPresentableIndex,
+  findNextPresentableIndex,
+  findPrevPresentableIndex,
+  presentableIndexToAuthorIndex,
+  presentablePosition,
+  snapToPresentableIndex,
+} from '../lib/page-visibility';
 import type { Page } from '../lib/sdk';
 import type { EntryDirection, StepAggregate, StepController } from '../lib/step-context';
 import type { SlideTransition } from '../lib/transition';
@@ -82,8 +92,10 @@ export function Player({
   const windowedRef = useRef(windowed);
   windowedRef.current = windowed;
 
-  const canPrev = index > 0;
-  const canNext = index < pages.length - 1;
+  const canPrev = findPrevPresentableIndex(pages, index) !== null;
+  const canNext = findNextPresentableIndex(pages, index) !== null;
+  const presentableTotal = countPresentablePages(pages);
+  const presentableIndex = presentablePosition(pages, index);
 
   const stepControllerRef = useRef<StepController | null>(null);
   const [entryDirection, setEntryDirection] = useState<EntryDirection>('jump');
@@ -101,21 +113,38 @@ export function Player({
   // synchronously, before the incoming page's <Steps> reads it on mount.
   const handleIndexChange = useCallback(
     (next: number) => {
-      const delta = next - index;
+      const target = controls ? snapToPresentableIndex(pages, next) : next;
+      const delta = target - index;
       setEntryDirection(delta === 1 ? 'forward' : delta === -1 ? 'backward' : 'jump');
-      onIndexChange(next);
+      onIndexChange(target);
     },
-    [index, onIndexChange],
+    [controls, pages, index, onIndexChange],
   );
+
+  useEffect(() => {
+    if (!controls) return;
+    const snapped = snapToPresentableIndex(pages, index);
+    if (snapped !== index) onIndexChange(snapped);
+  }, [controls, pages, index, onIndexChange]);
 
   const goPrev = useCallback(() => {
     if (stepControllerRef.current?.retreat()) return;
-    if (index > 0) handleIndexChange(index - 1);
-  }, [index, handleIndexChange]);
+    const prev = findPrevPresentableIndex(pages, index);
+    if (prev !== null) handleIndexChange(prev);
+  }, [pages, index, handleIndexChange]);
   const goNext = useCallback(() => {
     if (stepControllerRef.current?.advance()) return;
-    if (index < pages.length - 1) handleIndexChange(index + 1);
-  }, [index, pages.length, handleIndexChange]);
+    const next = findNextPresentableIndex(pages, index);
+    if (next !== null) handleIndexChange(next);
+  }, [pages, index, handleIndexChange]);
+
+  const handlePresentableJump = useCallback(
+    (presentableIdx: number) => {
+      const authorIdx = presentableIndexToAuthorIndex(pages, presentableIdx);
+      if (authorIdx !== null) handleIndexChange(authorIdx);
+    },
+    [pages, handleIndexChange],
+  );
 
   const overlayActive = controls && (overviewOpen || helpOpen);
 
@@ -264,12 +293,14 @@ export function Player({
       }
       if (e.key === 'Home') {
         setKeyboardDriven(true);
-        handleIndexChange(0);
+        const first = findFirstPresentableIndex(pages);
+        if (first !== null) handleIndexChange(first);
         return;
       }
       if (e.key === 'End') {
         setKeyboardDriven(true);
-        handleIndexChange(pages.length - 1);
+        const last = findLastPresentableIndex(pages);
+        if (last !== null) handleIndexChange(last);
         return;
       }
 
@@ -313,6 +344,7 @@ export function Player({
     handleIndexChange,
     pages.length,
     slideId,
+    pages,
   ]);
 
   // The control bar + progress strip only surface when the pointer is in
@@ -356,14 +388,18 @@ export function Player({
 
       {controls && (
         <div data-osd-chrome style={{ display: 'contents' }}>
-          <PresentProgressBar index={index} total={pages.length} visible={chromeVisible} />
+          <PresentProgressBar
+            index={presentableIndex - 1}
+            total={presentableTotal}
+            visible={chromeVisible}
+          />
           <PresentBlackoutOverlay mode={blackout} />
-          <PresentJumpInput pageCount={pages.length} onJump={handleIndexChange} />
+          <PresentJumpInput pageCount={presentableTotal} onJump={handlePresentableJump} />
           <PresentLaserPointer enabled={laser} />
           <PresentControlBar
             tooltipContainer={rootEl}
-            index={index}
-            total={pages.length}
+            index={presentableIndex - 1}
+            total={presentableTotal}
             visible={chromeVisible}
             startedAt={startedAt}
             blackout={blackout}

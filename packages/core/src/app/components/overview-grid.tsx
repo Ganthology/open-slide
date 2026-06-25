@@ -1,10 +1,17 @@
-import { ListOrdered, type LucideIcon, Sparkles, X } from 'lucide-react';
+import { EyeOff, ListOrdered, type LucideIcon, Sparkles, X } from 'lucide-react';
 import { type Ref, useEffect, useRef, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { DesignSystem } from '../lib/design';
 import { SlidePageProvider } from '../lib/page-context';
+import {
+  findFirstPresentableIndex,
+  findLastPresentableIndex,
+  findNextPresentableIndex,
+  findPrevPresentableIndex,
+  isPageHidden,
+} from '../lib/page-visibility';
 import type { Page } from '../lib/sdk';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../lib/sdk';
 import type { SlideTransition } from '../lib/transition';
@@ -55,40 +62,69 @@ export function OverviewGrid({
     focusedRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [focused, open]);
 
+  const skipHidden = variant === 'present';
+
   useEffect(() => {
     if (!open) return;
+
+    const stepFocus = (delta: number, cols: number) => {
+      setFocused((i) => {
+        if (!skipHidden) {
+          if (delta === 1) return Math.min(pages.length - 1, i + 1);
+          if (delta === -1) return Math.max(0, i - 1);
+          if (delta === cols) return Math.min(pages.length - 1, i + cols);
+          if (delta === -cols) return Math.max(0, i - cols);
+        }
+        if (delta === 1) return findNextPresentableIndex(pages, i) ?? i;
+        if (delta === -1) return findPrevPresentableIndex(pages, i) ?? i;
+        let next = i;
+        const steps = Math.abs(delta);
+        const stepFn = delta > 0 ? findNextPresentableIndex : findPrevPresentableIndex;
+        for (let s = 0; s < steps; s++) {
+          const candidate = stepFn(pages, next);
+          if (candidate === null) break;
+          next = candidate;
+        }
+        return next;
+      });
+    };
+
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLElement && e.target.matches('input, textarea')) return;
       const cols = computeCols(gridRef.current);
       if (e.key === 'ArrowRight') {
         e.preventDefault();
         e.stopPropagation();
-        setFocused((i) => Math.min(pages.length - 1, i + 1));
+        stepFocus(1, cols);
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
         e.stopPropagation();
-        setFocused((i) => Math.max(0, i - 1));
+        stepFocus(-1, cols);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         e.stopPropagation();
-        setFocused((i) => Math.min(pages.length - 1, i + cols));
+        stepFocus(cols, cols);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         e.stopPropagation();
-        setFocused((i) => Math.max(0, i - cols));
+        stepFocus(-cols, cols);
       } else if (e.key === 'Home') {
         e.preventDefault();
         e.stopPropagation();
-        setFocused(0);
+        setFocused(skipHidden ? (findFirstPresentableIndex(pages) ?? 0) : 0);
       } else if (e.key === 'End') {
         e.preventDefault();
         e.stopPropagation();
-        setFocused(pages.length - 1);
+        setFocused(
+          skipHidden ? (findLastPresentableIndex(pages) ?? pages.length - 1) : pages.length - 1,
+        );
       } else if (e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
-        onSelect(focused);
-        onClose();
+        if (!skipHidden || !isPageHidden(pages[focused])) {
+          onSelect(focused);
+          onClose();
+        }
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -97,7 +133,7 @@ export function OverviewGrid({
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [open, pages.length, focused, onClose, onSelect]);
+  }, [open, pages, focused, onClose, onSelect, skipHidden]);
 
   if (!open) return null;
 
@@ -140,6 +176,8 @@ export function OverviewGrid({
             {pages.map((PageComp, i) => {
               const isFocused = i === focused;
               const isCurrent = i === current;
+              const hidden = isPageHidden(PageComp);
+              const selectable = !skipHidden || !hidden;
               return (
                 <OverviewThumb
                   // biome-ignore lint/suspicious/noArrayIndexKey: pages list is render-stable
@@ -151,11 +189,14 @@ export function OverviewGrid({
                   design={design}
                   isFocused={isFocused}
                   isCurrent={isCurrent}
+                  hidden={hidden}
+                  selectable={selectable}
                   styles={styles}
                   moduleTransition={moduleTransition}
                   tooltipContainer={tooltipContainer}
                   onFocus={() => setFocused(i)}
                   onSelect={() => {
+                    if (!selectable) return;
                     onSelect(i);
                     onClose();
                   }}
@@ -176,6 +217,8 @@ function OverviewThumb({
   design,
   isFocused,
   isCurrent,
+  hidden = false,
+  selectable = true,
   styles,
   moduleTransition,
   tooltipContainer,
@@ -189,6 +232,8 @@ function OverviewThumb({
   design?: DesignSystem;
   isFocused: boolean;
   isCurrent: boolean;
+  hidden?: boolean;
+  selectable?: boolean;
   styles: OverviewStyles;
   moduleTransition?: SlideTransition;
   tooltipContainer?: HTMLElement | null;
@@ -213,10 +258,12 @@ function OverviewThumb({
       onClick={onSelect}
       onMouseEnter={onFocus}
       onFocus={onFocus}
+      disabled={!selectable}
       aria-label={format(t.present.overviewGoToAria, { n: index + 1 })}
       aria-current={isCurrent ? 'true' : undefined}
       className={cn(
         'group/thumb flex flex-col items-start gap-2 rounded-[6px] p-1.5 outline-none transition-colors',
+        !selectable && 'cursor-not-allowed opacity-45',
         isFocused ? styles.thumbFocused : styles.thumbHover,
       )}
     >
@@ -258,8 +305,16 @@ function OverviewThumb({
         >
           {(index + 1).toString().padStart(2, '0')}
         </span>
-        {(hasTransition || hasSteps) && (
+        {(hasTransition || hasSteps || hidden) && (
           <span className="flex items-center gap-1">
+            {hidden && (
+              <OverviewIndicator
+                icon={EyeOff}
+                label={t.thumbnailRail.hiddenIndicator}
+                className={styles.indicator}
+                tooltipContainer={tooltipContainer}
+              />
+            )}
             {hasTransition && (
               <OverviewIndicator
                 icon={Sparkles}

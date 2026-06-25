@@ -61,6 +61,7 @@ import { exportSlideAsHtml } from '../lib/export-html';
 import { exportSlideAsPdf, isSafari } from '../lib/export-pdf';
 import { exportSlideAsImagePptx } from '../lib/export-pptx';
 import { remapNotesSessionCacheAfterReorder } from '../lib/inspector/use-notes';
+import { isPageHidden } from '../lib/page-visibility';
 import type { SlideModule } from '../lib/sdk';
 import { usePrefersReducedMotion } from '../lib/use-prefers-reduced-motion';
 import { useSlideModule } from '../lib/use-slide-module';
@@ -225,15 +226,50 @@ export function Slide() {
     [pages, index, slideId, goTo, t.thumbnailRail],
   );
 
+  const togglePageHidden = useCallback(
+    async (i: number) => {
+      const before = pages;
+      const page = before[i];
+      if (!page) return;
+      const nextHidden = !isPageHidden(page);
+      page.hidden = nextHidden;
+      setPages([...before]);
+
+      try {
+        const res = await fetch(`/__slides/${encodeURIComponent(slideId)}/pages/${i}/hidden`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hidden: nextHidden }),
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({ error: res.statusText }));
+          throw new Error(detail.error ?? `HTTP ${res.status}`);
+        }
+        toast.success(
+          nextHidden
+            ? format(t.thumbnailRail.toastHidden, { n: i + 1 })
+            : format(t.thumbnailRail.toastShown, { n: i + 1 }),
+        );
+      } catch (err) {
+        page.hidden = !nextHidden;
+        setPages(before);
+        toast.error(`${t.thumbnailRail.toastHideFailed}: ${String((err as Error).message ?? err)}`);
+      }
+    },
+    [pages, slideId, t.thumbnailRail],
+  );
+
   const thumbnailActions = useMemo<ThumbnailActions | undefined>(
     () =>
       import.meta.env.DEV
         ? {
             onDuplicate: duplicatePage,
             onDelete: deletePage,
+            onToggleHidden: togglePageHidden,
+            isHidden: (i) => isPageHidden(pages[i]),
           }
         : undefined,
-    [duplicatePage, deletePage],
+    [duplicatePage, deletePage, togglePageHidden, pages],
   );
 
   useEffect(() => {

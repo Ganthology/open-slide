@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 import type { DesignSystem } from './design.ts';
 import type { SlideTransition } from './transition.ts';
 
-export type Page = ComponentType & { transition?: SlideTransition };
+export type Page = ComponentType & { transition?: SlideTransition; hidden?: boolean };
 
 export type SlideMeta = {
   title?: string;
