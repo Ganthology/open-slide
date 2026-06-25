@@ -11,6 +11,7 @@ import {
   resolveSlideEntry,
   rmSlideDir,
   SLIDE_ID_RE,
+  togglePageHiddenInSource,
   updateMetaTitleInSource,
   validateSlideName,
 } from '../../editing/slide-ops.ts';
@@ -21,6 +22,7 @@ import { type ApiContext, json, readBody } from './context.ts';
 // PUT    /__slides/:id/reorder            reorder pages { order: number[] }
 // DELETE /__slides/:id/pages/:i           remove page
 // POST   /__slides/:id/pages/:i/duplicate duplicate page
+// PATCH  /__slides/:id/pages/:i/hidden    toggle hidden { hidden: boolean }
 // POST   /__slides/:id/duplicate          duplicate slide directory { newId? }
 // PATCH  /__slides/:id                    rename slide (writes meta.title)
 // DELETE /__slides/:id                    delete slide directory + folder assignment
@@ -90,8 +92,11 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
 
         const isDelete = method === 'DELETE' && !op;
         const isDuplicate = method === 'POST' && op === 'duplicate';
-        if (!isDelete && !isDuplicate) return next();
-        const requestCheck = validateMutationRequest(req);
+        const isHidden = method === 'PATCH' && op === 'hidden';
+        if (!isDelete && !isDuplicate && !isHidden) return next();
+        const requestCheck = validateMutationRequest(req, {
+          requireJsonBody: isHidden,
+        });
         if (!requestCheck.ok) {
           return json(res, requestCheck.status, { error: requestCheck.error });
         }
@@ -106,19 +111,36 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
           return json(res, 404, { error: 'slide not found' });
         }
 
-        const updated = isDelete
-          ? removePageFromDefaultExportInSource(source, pageIndex)
-          : duplicatePageInDefaultExportInSource(source, pageIndex);
+        let updated: string | null | 'invalid-body';
+        if (isDelete) {
+          updated = removePageFromDefaultExportInSource(source, pageIndex);
+        } else if (isDuplicate) {
+          updated = duplicatePageInDefaultExportInSource(source, pageIndex);
+        } else {
+          const body = (await readBody(req)) as { hidden?: unknown };
+          if (typeof body.hidden !== 'boolean') {
+            updated = 'invalid-body';
+          } else {
+            updated = togglePageHiddenInSource(source, pageIndex, body.hidden);
+          }
+        }
+        if (updated === 'invalid-body') {
+          return json(res, 400, { error: 'invalid hidden' });
+        }
         if (updated === null) {
           return json(res, 422, {
             error: isDelete
               ? 'could not delete page — index out of range or default export is not an array'
-              : 'could not duplicate page — index out of range or default export is not an array',
+              : isDuplicate
+                ? 'could not duplicate page — index out of range or default export is not an array'
+                : 'could not toggle hidden — index out of range or page is not a named component',
           });
         }
         const withNotes = isDelete
           ? removeNotesElementInSource(updated, pageIndex)
-          : duplicateNotesElementInSource(updated, pageIndex);
+          : isDuplicate
+            ? duplicateNotesElementInSource(updated, pageIndex)
+            : updated;
         if (withNotes === null) {
           return json(res, 422, {
             error: isDelete

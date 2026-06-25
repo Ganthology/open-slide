@@ -15,10 +15,19 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Copy, Grid2x2, ListOrdered, type LucideIcon, Sparkles, Trash2 } from 'lucide-react';
+import {
+  Copy,
+  EyeOff,
+  Grid2x2,
+  ListOrdered,
+  type LucideIcon,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -30,6 +39,7 @@ import { format, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { DesignSystem } from '../lib/design';
 import { SlidePageProvider } from '../lib/page-context';
+import { isPageHidden } from '../lib/page-visibility';
 import type { Page } from '../lib/sdk';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../lib/sdk';
 import type { SlideTransition } from '../lib/transition';
@@ -40,6 +50,8 @@ type Orientation = 'vertical' | 'horizontal';
 export type ThumbnailActions = {
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
+  onToggleHidden: (index: number) => void;
+  isHidden: (index: number) => boolean;
 };
 
 type Props = {
@@ -313,6 +325,7 @@ function ThumbContents({
   }, [PageComp]);
 
   const hasTransition = Boolean(PageComp.transition ?? moduleTransition);
+  const hidden = isPageHidden(PageComp);
 
   return (
     <>
@@ -321,12 +334,14 @@ function ThumbContents({
           className={cn(
             'font-mono text-[10px] font-medium tracking-[0.06em] tabular-nums uppercase',
             active ? 'text-brand' : 'text-muted-foreground/70',
+            hidden && 'opacity-45',
           )}
         >
           {(index + 1).toString().padStart(2, '0')}
         </span>
-        {(hasTransition || hasSteps) && (
+        {(hasTransition || hasSteps || hidden) && (
           <div className="flex flex-col items-end gap-0.5">
+            {hidden && <ThumbIndicator icon={EyeOff} label={t.thumbnailRail.hiddenIndicator} />}
             {hasTransition && (
               <ThumbIndicator icon={Sparkles} label={t.thumbnailRail.transitionIndicator} />
             )}
@@ -343,6 +358,7 @@ function ThumbContents({
           active
             ? 'border-brand shadow-[0_0_0_1px_var(--brand)]'
             : 'border-hairline group-hover/thumb:border-foreground/25',
+          hidden && 'opacity-50',
         )}
         style={{ width: thumbWidth, height }}
       >
@@ -399,12 +415,18 @@ function ThumbContextMenu({
 }) {
   const t = useLocale();
   const canDelete = pageCount > 1;
+  const hidden = actions.isHidden(index);
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild aria-label={ariaLabel}>
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="min-w-[180px]">
+        <ContextMenuCheckboxItem checked={hidden} onSelect={() => actions.onToggleHidden(index)}>
+          <EyeOff />
+          {hidden ? t.thumbnailRail.showPage : t.thumbnailRail.hidePage}
+        </ContextMenuCheckboxItem>
+        <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => actions.onDuplicate(index)}>
           <Copy />
           {t.thumbnailRail.duplicatePage}

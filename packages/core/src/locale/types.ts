@@ -360,14 +360,22 @@ export type Locale = {
     goToPageAria: string;
     duplicatePage: string;
     deletePage: string;
+    hidePage: string;
+    showPage: string;
+    hiddenIndicator: string;
     /** template: "Page {n} actions" */
     pageActionsAria: string;
     /** template: "Duplicated page {n}" */
     toastDuplicated: string;
     /** template: "Deleted page {n}" */
     toastDeleted: string;
+    /** template: "Hidden page {n} when presenting" */
+    toastHidden: string;
+    /** template: "Page {n} visible when presenting" */
+    toastShown: string;
     toastDuplicateFailed: string;
     toastDeleteFailed: string;
+    toastHideFailed: string;
     resizeRail: string;
     transitionIndicator: string;
     stepsIndicator: string;

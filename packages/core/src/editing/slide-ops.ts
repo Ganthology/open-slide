@@ -584,3 +584,59 @@ export function duplicatePageInDefaultExportInSource(source: string, index: numb
 
   return source.slice(0, arrayStart) + rebuilt + source.slice(arrayEnd);
 }
+
+function getPageIdentifierAtIndex(source: string, index: number): string | null {
+  const found = findDefaultExportArray(source);
+  if (!found) return null;
+  const { elements } = found;
+  if (!Number.isInteger(index) || index < 0 || index >= elements.length) return null;
+  const text = source.slice(elements[index].start, elements[index].end).trim();
+  if (/^[A-Za-z_$][\w$]*$/.test(text)) return text;
+  return null;
+}
+
+function removeHiddenAssignment(source: string, name: string): string {
+  const lineRe = new RegExp(`^${name}\\.hidden\\s*=\\s*(?:true|false)\\s*;?\\s*\\n?`, 'm');
+  return source.replace(lineRe, '');
+}
+
+function insertHiddenAssignment(source: string, name: string): string {
+  const assignment = `${name}.hidden = true;\n`;
+  const exportDefaultIdx = source.search(/export\s+default\b/);
+  if (exportDefaultIdx === -1) return source;
+  return source.slice(0, exportDefaultIdx) + assignment + source.slice(exportDefaultIdx);
+}
+
+/**
+ * Toggle `ComponentName.hidden` for the page at `index` in `export default [...]`.
+ *
+ * The default-export element must be a bare identifier (e.g. `Cover`, not an inline
+ * arrow function). Returns the rewritten source, the original source when the
+ * requested state is already satisfied, or `null` when the shape is too surprising.
+ */
+export function togglePageHiddenInSource(
+  source: string,
+  index: number,
+  hidden: boolean,
+): string | null {
+  const name = getPageIdentifierAtIndex(source, index);
+  if (!name) return null;
+
+  const hiddenTrueRe = new RegExp(`^${name}\\.hidden\\s*=\\s*true\\s*;?\\s*$`, 'm');
+  const hiddenFalseRe = new RegExp(`^${name}\\.hidden\\s*=\\s*false\\s*;?\\s*$`, 'm');
+  const hasTrue = hiddenTrueRe.test(source);
+  const hasFalse = hiddenFalseRe.test(source);
+
+  if (hidden) {
+    if (hasTrue) return source;
+    if (hasFalse) {
+      return source.replace(hiddenFalseRe, `${name}.hidden = true;`);
+    }
+    return insertHiddenAssignment(source, name);
+  }
+
+  if (hasTrue || hasFalse) {
+    return removeHiddenAssignment(source, name);
+  }
+  return source;
+}

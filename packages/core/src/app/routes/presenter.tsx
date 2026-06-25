@@ -10,6 +10,14 @@ import {
 } from '../components/present/use-presenter-channel';
 import { SlideCanvas } from '../components/slide-canvas';
 import { SlidePageProvider } from '../lib/page-context';
+import {
+  countPresentablePages,
+  findNextPresentableIndex,
+  findPrevPresentableIndex,
+  presentableIndexToAuthorIndex,
+  presentablePosition,
+  snapToPresentableIndex,
+} from '../lib/page-visibility';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../lib/sdk';
 import { type StepController, StepHost } from '../lib/step-context';
 import { useSlideModule } from '../lib/use-slide-module';
@@ -50,6 +58,14 @@ export function Presenter() {
   const goPrev = useCallback(() => send({ type: 'prev' }), [send]);
   const goNext = useCallback(() => send({ type: 'next' }), [send]);
   const goTo = useCallback((i: number) => send({ type: 'goto', index: i }), [send]);
+  const goToPresentable = useCallback(
+    (presentableIdx: number) => {
+      const deck = slide?.default ?? [];
+      const authorIdx = presentableIndexToAuthorIndex(deck, presentableIdx);
+      if (authorIdx !== null) goTo(authorIdx);
+    },
+    [slide, goTo],
+  );
   const toggleBlack = useCallback(() => send({ type: 'toggle-blackout', mode: 'black' }), [send]);
   const toggleWhite = useCallback(() => send({ type: 'toggle-blackout', mode: 'white' }), [send]);
 
@@ -114,7 +130,10 @@ export function Presenter() {
 
   const pages = slide.default;
   const total = pages.length;
-  const index = Math.max(0, Math.min(total - 1, state?.index ?? 0));
+  const rawIndex = Math.max(0, Math.min(total - 1, state?.index ?? 0));
+  const index = snapToPresentableIndex(pages, rawIndex);
+  const presentableTotal = countPresentablePages(pages);
+  const presentableIndex = presentablePosition(pages, index);
   const note = slide.notes?.[index];
   const blackout = state?.blackout ?? null;
   const startedAt = state?.startedAt ?? localStart;
@@ -122,9 +141,10 @@ export function Presenter() {
   const stepCount = Math.max(0, state?.stepCount ?? 0);
 
   const stepsRemaining = stepIndex < stepCount;
-  const hasNextSlide = index < total - 1;
+  const hasNextSlide = findNextPresentableIndex(pages, index) !== null;
+  const hasPrevSlide = findPrevPresentableIndex(pages, index) !== null;
   const hasNext = stepsRemaining || hasNextSlide;
-  const nextPageIndex = stepsRemaining ? index : Math.min(total - 1, index + 1);
+  const nextPageIndex = stepsRemaining ? index : (findNextPresentableIndex(pages, index) ?? index);
   const nextRevealed = stepsRemaining ? stepIndex + 1 : 0;
 
   const CurrentPage = pages[index];
@@ -133,8 +153,8 @@ export function Presenter() {
   return (
     <div className="dark flex h-dvh w-screen flex-col overflow-hidden bg-background text-foreground">
       <PresenterTopBar
-        index={index}
-        total={total}
+        index={presentableIndex - 1}
+        total={presentableTotal}
         startedAt={startedAt}
         slideTitle={slide.meta?.title ?? slideId}
         connected={hasProjection}
@@ -207,13 +227,17 @@ export function Presenter() {
             </div>
           </div>
 
-          <PresenterJumpControl total={total} current={index} onJump={goTo} />
+          <PresenterJumpControl
+            total={presentableTotal}
+            current={presentableIndex - 1}
+            onJump={goToPresentable}
+          />
         </aside>
       </div>
 
       <PresenterBottomBar
-        index={index}
-        total={total}
+        hasPrev={hasPrevSlide}
+        hasNext={hasNextSlide || stepsRemaining}
         blackout={blackout}
         onPrev={goPrev}
         onNext={goNext}
@@ -265,16 +289,16 @@ function PresenterTopBar({
 }
 
 function PresenterBottomBar({
-  index,
-  total,
+  hasPrev,
+  hasNext,
   blackout,
   onPrev,
   onNext,
   onBlackout,
   onWhiteout,
 }: {
-  index: number;
-  total: number;
+  hasPrev: boolean;
+  hasNext: boolean;
   blackout: 'black' | 'white' | null;
   onPrev: () => void;
   onNext: () => void;
@@ -285,10 +309,10 @@ function PresenterBottomBar({
   return (
     <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-hairline px-6 py-3">
       <div className="flex items-center gap-2">
-        <Button variant="outline" onClick={onPrev} disabled={index === 0}>
+        <Button variant="outline" onClick={onPrev} disabled={!hasPrev}>
           <ChevronLeft className="size-4" /> {t.presenter.prev}
         </Button>
-        <Button variant="outline" onClick={onNext} disabled={index >= total - 1}>
+        <Button variant="outline" onClick={onNext} disabled={!hasNext}>
           {t.presenter.next} <ChevronRight className="size-4" />
         </Button>
       </div>

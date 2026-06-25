@@ -10,6 +10,7 @@ import {
   removePageFromDefaultExportInSource,
   reorderDefaultExportPagesInSource,
   reorderNotesArrayInSource,
+  togglePageHiddenInSource,
   updateMetaTitleInSource,
   validateSlideName,
 } from './slide-ops.ts';
@@ -512,5 +513,38 @@ describe('duplicateNotesElementInSource', () => {
   it('returns null when notes is not an array literal', () => {
     const source = `export const notes = "oops";\nexport default [A];\n`;
     expect(duplicateNotesElementInSource(source, 0)).toBeNull();
+  });
+});
+
+describe('togglePageHiddenInSource', () => {
+  const source = `const A = () => null;
+const B = () => null;
+export default [A, B];
+`;
+
+  it('inserts a hidden assignment before export default', () => {
+    const out = togglePageHiddenInSource(source, 1, true);
+    expect(out).toContain('B.hidden = true;');
+    expect(out).toContain('export default [A, B];');
+  });
+
+  it('removes an existing hidden assignment when unhiding', () => {
+    const hidden = `${source.slice(0, source.indexOf('export'))}B.hidden = true;\n${source.slice(source.indexOf('export'))}`;
+    const out = togglePageHiddenInSource(hidden, 1, false);
+    expect(out).not.toContain('B.hidden');
+  });
+
+  it('is a no-op when already hidden', () => {
+    const hidden = `const A = () => null;\nconst B = () => null;\nB.hidden = true;\nexport default [A, B];\n`;
+    expect(togglePageHiddenInSource(hidden, 1, true)).toBe(hidden);
+  });
+
+  it('returns null for out-of-range indices', () => {
+    expect(togglePageHiddenInSource(source, 2, true)).toBeNull();
+  });
+
+  it('returns null for inline arrow components', () => {
+    const inline = `export default [() => null];\n`;
+    expect(togglePageHiddenInSource(inline, 0, true)).toBeNull();
   });
 });
