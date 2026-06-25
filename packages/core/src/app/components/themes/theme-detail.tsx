@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import { isOfficialThemeSlug } from '../../lib/official-themes';
 import { SlidePageProvider } from '../../lib/page-context';
 import type { SlideModule } from '../../lib/sdk';
 import { loadSlide, slidesByTheme } from '../../lib/slides';
@@ -48,6 +49,7 @@ export function ThemeDetail({ themeId, onBack }: { themeId: string; onBack: () =
     () => format(t.themes.addThemeCommand, { slug: themeId }),
     [t.themes.addThemeCommand, themeId],
   );
+  const isOfficial = isOfficialThemeSlug(themeId);
 
   useEffect(() => {
     return () => {
@@ -187,7 +189,9 @@ export function ThemeDetail({ themeId, onBack }: { themeId: string; onBack: () =
 
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="eyebrow">{t.themes.addToRepo}</span>
+              <span className="eyebrow">
+                {isOfficial ? t.themes.addToRepo : t.themes.shareTheme}
+              </span>
               <button
                 type="button"
                 aria-label={t.themes.copyThemeMarkdown}
@@ -199,20 +203,26 @@ export function ThemeDetail({ themeId, onBack }: { themeId: string; onBack: () =
               </button>
             </div>
 
-            <button
-              type="button"
-              aria-label={t.themes.copyAddThemeCommandAria}
-              onClick={() => void copyInstallCommand()}
-              className="group flex w-full items-center gap-3 rounded-[8px] border border-hairline bg-card px-3 py-2.5 text-left font-mono text-[11.5px] text-foreground/90 transition-colors hover:bg-muted/60"
-            >
-              <span aria-hidden className="text-muted-foreground">
-                $
-              </span>
-              <span className="min-w-0 flex-1 truncate">{installCommand}</span>
-              <span className="relative grid size-4 shrink-0 place-items-center text-muted-foreground group-hover:text-foreground">
-                <CopyIconSwap copied={commandCopied} className="size-3.5" />
-              </span>
-            </button>
+            {isOfficial ? (
+              <button
+                type="button"
+                aria-label={t.themes.copyAddThemeCommandAria}
+                onClick={() => void copyInstallCommand()}
+                className="group flex w-full items-center gap-3 rounded-[8px] border border-hairline bg-card px-3 py-2.5 text-left font-mono text-[11.5px] text-foreground/90 transition-colors hover:bg-muted/60"
+              >
+                <span aria-hidden className="text-muted-foreground">
+                  $
+                </span>
+                <span className="min-w-0 flex-1 truncate">{installCommand}</span>
+                <span className="relative grid size-4 shrink-0 place-items-center text-muted-foreground group-hover:text-foreground">
+                  <CopyIconSwap copied={commandCopied} className="size-3.5" />
+                </span>
+              </button>
+            ) : (
+              <p className="text-[12px] leading-relaxed text-muted-foreground">
+                {t.themes.communityThemeHint}
+              </p>
+            )}
           </div>
 
           <div className="relative">

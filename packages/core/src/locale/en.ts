@@ -413,6 +413,9 @@ export const en: Locale = {
     expandPromptAria: 'Expand prompt',
     collapsePromptAria: 'Collapse prompt',
     addToRepo: 'Add to your repo',
+    shareTheme: 'Share this theme',
+    communityThemeHint:
+      'Copy the spec to reuse locally. To let others install it, publish the theme files to awesome-open-slide and add a registry entry — then they can run add-theme with --registry or --from.',
     addThemeCommand: 'npx @open-slide/cli add-theme {slug}',
     copyAddThemeCommandAria: 'Copy install command',
     copyThemeMarkdown: 'Copy spec',

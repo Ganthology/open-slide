@@ -411,6 +411,9 @@ export const zhCN: Locale = {
     expandPromptAria: '展开 prompt',
     collapsePromptAria: '收起 prompt',
     addToRepo: '添加到你的仓库',
+    shareTheme: '分享此主题',
+    communityThemeHint:
+      '复制规范可在本地复用。若要让他人安装，请将主题文件发布到 awesome-open-slide 并添加 registry 条目，之后可用 add-theme --registry 或 --from 安装。',
     addThemeCommand: 'npx @open-slide/cli add-theme {slug}',
     copyAddThemeCommandAria: '复制安装命令',
     copyThemeMarkdown: '复制规范',

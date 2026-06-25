@@ -440,6 +440,8 @@ export type Locale = {
     expandPromptAria: string;
     collapsePromptAria: string;
     addToRepo: string;
+    shareTheme: string;
+    communityThemeHint: string;
     addThemeCommand: string;
     copyAddThemeCommandAria: string;
     copyThemeMarkdown: string;
