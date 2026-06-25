@@ -410,5 +410,17 @@ export const zhTW: Locale = {
     usedByEmpty: '尚未有 slides 使用此主題。',
     expandPromptAria: '展開 prompt',
     collapsePromptAria: '收合 prompt',
+    addToRepo: '新增到你的儲存庫',
+    shareTheme: '分享此主題',
+    communityThemeHint:
+      '複製規範可在本地重複使用。若要讓他人安裝，請將主題檔發布到 awesome-open-slide 並新增 registry 條目，之後可用 add-theme --registry 或 --from 安裝。',
+    addThemeCommand: 'npx @open-slide/cli add-theme {slug}',
+    copyAddThemeCommandAria: '複製安裝指令',
+    copyThemeMarkdown: '複製規範',
+    copyThemeMarkdownAria: '複製主題 Markdown',
+    toastCopyAddThemeSuccess: '已複製安裝指令',
+    toastCopyAddThemeFailed: '無法複製安裝指令',
+    toastCopyThemeMarkdownSuccess: '已複製主題規範',
+    toastCopyThemeMarkdownFailed: '無法複製主題規範',
   },
 };

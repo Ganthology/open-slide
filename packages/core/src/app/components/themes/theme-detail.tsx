@@ -1,13 +1,15 @@
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import { isOfficialThemeSlug } from '../../lib/official-themes';
 import { SlidePageProvider } from '../../lib/page-context';
 import type { SlideModule } from '../../lib/sdk';
 import { loadSlide, slidesByTheme } from '../../lib/slides';
-import { loadThemeDemo, type ThemeDemoModule, themes } from '../../lib/themes';
+import { loadThemeDemo, type Theme, type ThemeDemoModule, themes } from '../../lib/themes';
 import { SlideCanvas } from '../slide-canvas';
 
 export function ThemeDetail({ themeId, onBack }: { themeId: string; onBack: () => void }) {
@@ -38,6 +40,50 @@ export function ThemeDetail({ themeId, onBack }: { themeId: string; onBack: () =
   const promptRef = useRef<HTMLPreElement>(null);
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [promptOverflows, setPromptOverflows] = useState(false);
+  const [commandCopied, setCommandCopied] = useState(false);
+  const [markdownCopied, setMarkdownCopied] = useState(false);
+  const commandCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markdownCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const installCommand = useMemo(
+    () => format(t.themes.addThemeCommand, { slug: themeId }),
+    [t.themes.addThemeCommand, themeId],
+  );
+  const isOfficial = isOfficialThemeSlug(themeId);
+
+  useEffect(() => {
+    return () => {
+      if (commandCopiedTimerRef.current) clearTimeout(commandCopiedTimerRef.current);
+      if (markdownCopiedTimerRef.current) clearTimeout(markdownCopiedTimerRef.current);
+    };
+  }, []);
+
+  const copyInstallCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(installCommand);
+      toast.success(t.themes.toastCopyAddThemeSuccess);
+      setCommandCopied(true);
+      if (commandCopiedTimerRef.current) clearTimeout(commandCopiedTimerRef.current);
+      commandCopiedTimerRef.current = setTimeout(() => setCommandCopied(false), 1200);
+    } catch (err) {
+      console.error('[open-slide] copy theme install command failed', err);
+      toast.error(t.themes.toastCopyAddThemeFailed);
+    }
+  };
+
+  const copyThemeMarkdown = async () => {
+    if (!theme) return;
+    try {
+      await navigator.clipboard.writeText(formatThemeMarkdown(theme));
+      toast.success(t.themes.toastCopyThemeMarkdownSuccess);
+      setMarkdownCopied(true);
+      if (markdownCopiedTimerRef.current) clearTimeout(markdownCopiedTimerRef.current);
+      markdownCopiedTimerRef.current = setTimeout(() => setMarkdownCopied(false), 1200);
+    } catch (err) {
+      console.error('[open-slide] copy theme markdown failed', err);
+      toast.error(t.themes.toastCopyThemeMarkdownFailed);
+    }
+  };
 
   const themeBody = theme?.body;
   useEffect(() => {
@@ -139,6 +185,44 @@ export function ThemeDetail({ themeId, onBack }: { themeId: string; onBack: () =
                 </button>
               </div>
             ) : null}
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="eyebrow">
+                {isOfficial ? t.themes.addToRepo : t.themes.shareTheme}
+              </span>
+              <button
+                type="button"
+                aria-label={t.themes.copyThemeMarkdown}
+                onClick={() => void copyThemeMarkdown()}
+                className="inline-flex items-center gap-1.5 rounded-[6px] border border-border bg-card px-2.5 py-1 font-mono text-[10.5px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <CopyIconSwap copied={markdownCopied} className="size-3" />
+                {t.themes.copyThemeMarkdown}
+              </button>
+            </div>
+
+            {isOfficial ? (
+              <button
+                type="button"
+                aria-label={t.themes.copyAddThemeCommandAria}
+                onClick={() => void copyInstallCommand()}
+                className="group flex w-full items-center gap-3 rounded-[8px] border border-hairline bg-card px-3 py-2.5 text-left font-mono text-[11.5px] text-foreground/90 transition-colors hover:bg-muted/60"
+              >
+                <span aria-hidden className="text-muted-foreground">
+                  $
+                </span>
+                <span className="min-w-0 flex-1 truncate">{installCommand}</span>
+                <span className="relative grid size-4 shrink-0 place-items-center text-muted-foreground group-hover:text-foreground">
+                  <CopyIconSwap copied={commandCopied} className="size-3.5" />
+                </span>
+              </button>
+            ) : (
+              <p className="text-[12px] leading-relaxed text-muted-foreground">
+                {t.themes.communityThemeHint}
+              </p>
+            )}
           </div>
 
           <div className="relative">
@@ -252,6 +336,32 @@ function ThemeSlideCard({ id }: { id: string }) {
 }
 
 const PROMPT_COLLAPSED_PX = 320;
+
+function formatThemeMarkdown(theme: Theme): string {
+  const lines = ['---', `name: ${theme.name}`];
+  if (theme.description) lines.push(`description: ${theme.description}`);
+  lines.push('---', '', theme.body);
+  return lines.join('\n');
+}
+
+function CopyIconSwap({ copied, className }: { copied: boolean; className?: string }) {
+  return (
+    <span className={cn('relative grid place-items-center', className)}>
+      <Copy
+        className={cn(
+          'col-start-1 row-start-1 transition-opacity duration-200',
+          copied ? 'opacity-0' : 'opacity-100',
+        )}
+      />
+      <Check
+        className={cn(
+          'col-start-1 row-start-1 transition-opacity duration-200',
+          copied ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+    </span>
+  );
+}
 
 const HEX_RE = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g;
 

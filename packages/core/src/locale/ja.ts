@@ -418,5 +418,17 @@ export const ja: Locale = {
     usedByEmpty: 'このテーマを使うスライドはまだありません。',
     expandPromptAria: 'プロンプトを展開',
     collapsePromptAria: 'プロンプトを折りたたむ',
+    addToRepo: 'リポジトリに追加',
+    shareTheme: 'このテーマを共有',
+    communityThemeHint:
+      '仕様をコピーすればローカルで再利用できます。他の人がインストールできるようにするには、awesome-open-slide にテーマを公開して registry に登録し、add-theme --registry または --from を使います。',
+    addThemeCommand: 'npx @open-slide/cli add-theme {slug}',
+    copyAddThemeCommandAria: 'インストールコマンドをコピー',
+    copyThemeMarkdown: '仕様をコピー',
+    copyThemeMarkdownAria: 'テーマ Markdown をコピー',
+    toastCopyAddThemeSuccess: 'インストールコマンドをコピーしました',
+    toastCopyAddThemeFailed: 'インストールコマンドをコピーできませんでした',
+    toastCopyThemeMarkdownSuccess: 'テーマ仕様をコピーしました',
+    toastCopyThemeMarkdownFailed: 'テーマ仕様をコピーできませんでした',
   },
 };

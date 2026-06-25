@@ -439,5 +439,16 @@ export type Locale = {
     usedByEmpty: string;
     expandPromptAria: string;
     collapsePromptAria: string;
+    addToRepo: string;
+    shareTheme: string;
+    communityThemeHint: string;
+    addThemeCommand: string;
+    copyAddThemeCommandAria: string;
+    copyThemeMarkdown: string;
+    copyThemeMarkdownAria: string;
+    toastCopyAddThemeSuccess: string;
+    toastCopyAddThemeFailed: string;
+    toastCopyThemeMarkdownSuccess: string;
+    toastCopyThemeMarkdownFailed: string;
   };
 };

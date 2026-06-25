@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import prompts from 'prompts';
+import { addTheme, DEFAULT_THEME_REGISTRY, listAvailableThemes } from './add-theme.ts';
 import { type InitOptions, init, isDirNonEmpty, sanitizeDirName } from './init.ts';
 import { detectPackageManager, PACKAGE_MANAGERS, type PackageManager } from './package-manager.ts';
 
@@ -141,6 +142,60 @@ async function runInit(dirArg: string | undefined, flags: InitCliFlags): Promise
   await init(opts);
 }
 
+interface AddThemeCliFlags {
+  force?: boolean;
+  list?: boolean;
+  dir?: string;
+  from?: string;
+  registry?: string;
+}
+
+async function runAddTheme(slug: string | undefined, flags: AddThemeCliFlags): Promise<void> {
+  const registryUrl = flags.registry ?? process.env.OPEN_SLIDE_THEME_REGISTRY;
+
+  if (flags.list) {
+    const { bundled, community } = await listAvailableThemes(registryUrl);
+    if (bundled.length === 0 && community.length === 0) {
+      process.stdout.write(chalk.dim('No themes found.\n'));
+      return;
+    }
+    if (bundled.length > 0) {
+      process.stdout.write(`${chalk.bold('Official themes')}\n`);
+      for (const id of bundled) {
+        process.stdout.write(`  ${chalk.cyan(id)}\n`);
+      }
+    }
+    if (community.length > 0) {
+      if (bundled.length > 0) process.stdout.write('\n');
+      process.stdout.write(`${chalk.bold('Community themes')}\n`);
+      for (const id of community) {
+        process.stdout.write(`  ${chalk.cyan(id)}\n`);
+      }
+    }
+    if (community.length === 0) {
+      process.stdout.write(
+        `\n${chalk.dim('Community themes: set --registry or OPEN_SLIDE_THEME_REGISTRY to a registry.json URL.')}\n`,
+      );
+    }
+    return;
+  }
+
+  if (!slug) {
+    throw new Error(
+      'Theme slug required. Example: open-slide add-theme aurora — or open-slide add-theme my-theme --from github:owner/repo/themes/my-theme',
+    );
+  }
+
+  await addTheme({
+    slug,
+    cwd: process.cwd(),
+    themesDir: flags.dir ?? 'themes',
+    force: flags.force ?? false,
+    from: flags.from,
+    registryUrl: registryUrl || undefined,
+  });
+}
+
 export async function run(argv: string[]): Promise<void> {
   const version = await readVersion();
 
@@ -166,6 +221,22 @@ export async function run(argv: string[]): Promise<void> {
     .option('--no-git', 'skip git init and initial commit')
     .action(async (dir: string | undefined, flags: InitCliFlags) => {
       await runInit(dir, flags);
+    });
+
+  program
+    .command('add-theme')
+    .description('Install a theme into themes/')
+    .argument('[slug]', 'theme id (e.g. aurora, bright-sans)')
+    .option('-f, --force', 'overwrite existing theme files', false)
+    .option('--list', 'list official and registry themes', false)
+    .option('--dir <dir>', 'themes directory (default: themes)', 'themes')
+    .option('--from <source>', 'local path or github:owner/repo/path (for community themes)')
+    .option(
+      '--registry <url>',
+      `community registry.json URL (default env: OPEN_SLIDE_THEME_REGISTRY; suggested: ${DEFAULT_THEME_REGISTRY})`,
+    )
+    .action(async (slug: string | undefined, flags: AddThemeCliFlags) => {
+      await runAddTheme(slug, flags);
     });
 
   await program.parseAsync(argv, { from: 'user' });

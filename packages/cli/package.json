@@ -9,6 +9,7 @@
   "files": [
     "dist",
     "template",
+    "themes",
     "README.md"
   ],
   "scripts": {
