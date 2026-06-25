@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { designToCssVars } from './design';
 import { SlidePageProvider } from './page-context';
+import { preparePrintLinks } from './pdf-print-links';
 import { isFrameAnimationSettled, waitForDataWaitfor, waitForFonts } from './print-ready';
 import type { SlideModule } from './sdk';
 
@@ -175,6 +176,7 @@ export async function exportSlideAsPdf(
 
     await waitForDataWaitfor(root);
     neutralizeGradientBackgrounds(root);
+    preparePrintLinks(root);
     await sleep(100); // flush layout
 
     onProgress?.({ phase: 'printing', current: total, total, percent: 99 });
