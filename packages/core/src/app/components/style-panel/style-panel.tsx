@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from '../ui/separator';
 import { Slider } from '../ui/slider';
 import { useDesignPanelState } from './design-provider';
+import { ThemePickerSection } from './theme-picker';
 
 const FONT_PRESETS: Array<{ label: string; value: string }> = [
   {
@@ -92,6 +93,10 @@ export function DesignPanel({ open, onClose }: DesignPanelProps) {
         )
       }
     >
+      <ThemePickerSection />
+
+      <Separator />
+
       <Section title={t.stylePanel.colorsSection}>
         <ColorField
           label={t.stylePanel.backgroundLabel}

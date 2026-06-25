@@ -1,5 +1,15 @@
-import { type Page, useSlidePageNumber } from '@open-slide/core';
+import { type DesignSystem, type Page, useSlidePageNumber } from '@open-slide/core';
 import type { ReactNode } from 'react';
+
+export const design: DesignSystem = {
+  palette: { bg: '#fff2e8', text: '#2d1b4e', accent: '#ff4d8d' },
+  fonts: {
+    display: "'Outfit', 'Inter', system-ui, sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+  },
+  typeScale: { hero: 152, body: 34 },
+  radius: 24,
+};
 
 const styles = `
 @keyframes sp-pop {

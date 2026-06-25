@@ -277,6 +277,11 @@ export type Locale = {
     fontPresetCustom: string;
     shuffleAria: string;
     shuffleTitle: string;
+    themesSection: string;
+    applyThemeAria: string;
+    themeNoPreview: string;
+    themeNoTokens: string;
+    themeLoadFailed: string;
   };
 
   asset: {

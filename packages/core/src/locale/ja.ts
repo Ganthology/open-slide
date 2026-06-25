@@ -280,6 +280,11 @@ export const ja: Locale = {
     fontPresetCustom: 'カスタム…',
     shuffleAria: 'デザインをシャッフル',
     shuffleTitle: 'シャッフルしてインスピレーションを得る',
+    themesSection: 'テーマ',
+    applyThemeAria: '{name} テーマを適用',
+    themeNoPreview: 'プレビューなし',
+    themeNoTokens: 'このテーマにはデザイントークンがありません',
+    themeLoadFailed: 'テーマの読み込みに失敗しました',
   },
 
   asset: {

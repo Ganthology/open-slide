@@ -1,5 +1,15 @@
-import { type Page, useSlidePageNumber } from '@open-slide/core';
+import { type DesignSystem, type Page, useSlidePageNumber } from '@open-slide/core';
 import type { ReactNode } from 'react';
+
+export const design: DesignSystem = {
+  palette: { bg: '#ffffff', text: '#202124', accent: '#1a73e8' },
+  fonts: {
+    display: "'Inter Tight', 'Inter', -apple-system, system-ui, sans-serif",
+    body: "'Inter', -apple-system, system-ui, sans-serif",
+  },
+  typeScale: { hero: 132, body: 32 },
+  radius: 24,
+};
 
 const styles = `
 @keyframes bs-fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }

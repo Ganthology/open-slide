@@ -275,6 +275,11 @@ export const zhTW: Locale = {
     fontPresetCustom: '自訂…',
     shuffleAria: '隨機設計',
     shuffleTitle: '隨機配色獲取靈感',
+    themesSection: '主題',
+    applyThemeAria: '套用 {name} 主題',
+    themeNoPreview: '無預覽',
+    themeNoTokens: '此主題沒有設計樣式',
+    themeLoadFailed: '載入主題失敗',
   },
 
   asset: {

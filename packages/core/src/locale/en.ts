@@ -277,6 +277,11 @@ export const en: Locale = {
     fontPresetCustom: 'Custom…',
     shuffleAria: 'Shuffle design',
     shuffleTitle: 'Shuffle for inspiration',
+    themesSection: 'Theme',
+    applyThemeAria: 'Apply {name} theme',
+    themeNoPreview: 'No preview',
+    themeNoTokens: 'This theme has no design tokens',
+    themeLoadFailed: 'Failed to load theme',
   },
 
   asset: {

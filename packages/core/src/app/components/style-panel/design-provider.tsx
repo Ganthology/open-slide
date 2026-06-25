@@ -10,8 +10,10 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 import { useHistory } from '@/components/history-provider';
+import { useLocale } from '@/lib/use-locale';
 import { type DesignSystem, defaultDesign, designToCssVars } from '../../lib/design';
 import { shuffleDesign } from '../../lib/design-presets';
+import { loadThemeDemo } from '../../lib/themes';
 import { useDesign as useDesignFetch } from './use-design';
 
 type DesignCtx = {
@@ -28,6 +30,7 @@ type DesignCtx = {
   discard: () => void;
   resetToDefaults: () => void;
   shuffle: () => void;
+  applyTheme: (themeId: string) => Promise<void>;
 };
 
 const Ctx = createContext<DesignCtx | null>(null);
@@ -44,6 +47,7 @@ function clone<T>(d: T): T {
 
 export function DesignProvider({ slideId, children }: { slideId: string; children: ReactNode }) {
   const { design, exists, warning, loaded, save } = useDesignFetch(slideId);
+  const t = useLocale();
   const [draft, setDraft] = useState<DesignSystem | null>(null);
   const [committing, setCommitting] = useState(false);
   const history = useHistory();
@@ -110,6 +114,29 @@ export function DesignProvider({ slideId, children }: { slideId: string; childre
     });
   }, [history]);
 
+  const applyTheme = useCallback(
+    async (themeId: string) => {
+      try {
+        const demo = await loadThemeDemo(themeId);
+        if (!demo.design) {
+          toast.error(t.stylePanel.themeNoTokens);
+          return;
+        }
+        const prev = draftRef.current;
+        const next = clone(demo.design);
+        setDraft(next);
+        history.record({
+          coalesceKey: `design:theme:${themeId}`,
+          undo: () => setDraft(prev),
+          redo: () => setDraft(next),
+        });
+      } catch {
+        toast.error(t.stylePanel.themeLoadFailed);
+      }
+    },
+    [history, t.stylePanel.themeLoadFailed, t.stylePanel.themeNoTokens],
+  );
+
   // SlideCanvas emits its design vars inline on the canvas root, so a draft
   // overlay must use `!important` to outrank those inline styles.
   const previewCss = useMemo(() => {
@@ -134,6 +161,7 @@ export function DesignProvider({ slideId, children }: { slideId: string; childre
     discard,
     resetToDefaults,
     shuffle,
+    applyTheme,
   };
 
   return (
