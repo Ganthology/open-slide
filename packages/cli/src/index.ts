@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import prompts from 'prompts';
+import { addTheme, listBundledThemes } from './add-theme.ts';
 import { type InitOptions, init, isDirNonEmpty, sanitizeDirName } from './init.ts';
 import { detectPackageManager, PACKAGE_MANAGERS, type PackageManager } from './package-manager.ts';
 
@@ -141,6 +142,38 @@ async function runInit(dirArg: string | undefined, flags: InitCliFlags): Promise
   await init(opts);
 }
 
+interface AddThemeCliFlags {
+  force?: boolean;
+  list?: boolean;
+  dir?: string;
+}
+
+async function runAddTheme(slug: string | undefined, flags: AddThemeCliFlags): Promise<void> {
+  if (flags.list) {
+    const themes = await listBundledThemes();
+    if (themes.length === 0) {
+      process.stdout.write(chalk.dim('No bundled themes.\n'));
+      return;
+    }
+    process.stdout.write(`${chalk.bold('Bundled themes')}\n`);
+    for (const id of themes) {
+      process.stdout.write(`  ${chalk.cyan(id)}\n`);
+    }
+    return;
+  }
+
+  if (!slug) {
+    throw new Error('Theme slug required. Example: open-slide add-theme aurora');
+  }
+
+  await addTheme({
+    slug,
+    cwd: process.cwd(),
+    themesDir: flags.dir ?? 'themes',
+    force: flags.force ?? false,
+  });
+}
+
 export async function run(argv: string[]): Promise<void> {
   const version = await readVersion();
 
@@ -166,6 +199,17 @@ export async function run(argv: string[]): Promise<void> {
     .option('--no-git', 'skip git init and initial commit')
     .action(async (dir: string | undefined, flags: InitCliFlags) => {
       await runInit(dir, flags);
+    });
+
+  program
+    .command('add-theme')
+    .description('Copy a bundled theme into themes/')
+    .argument('[slug]', 'theme id (e.g. aurora, bright-sans)')
+    .option('-f, --force', 'overwrite existing theme files', false)
+    .option('--list', 'list bundled themes', false)
+    .option('--dir <dir>', 'themes directory (default: themes)', 'themes')
+    .action(async (slug: string | undefined, flags: AddThemeCliFlags) => {
+      await runAddTheme(slug, flags);
     });
 
   await program.parseAsync(argv, { from: 'user' });
