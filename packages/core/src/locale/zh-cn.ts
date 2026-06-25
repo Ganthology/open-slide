@@ -275,6 +275,11 @@ export const zhCN: Locale = {
     fontPresetCustom: '自定义…',
     shuffleAria: '随机设计',
     shuffleTitle: '随机配色获取灵感',
+    themesSection: '主题',
+    applyThemeAria: '应用 {name} 主题',
+    themeNoPreview: '无预览',
+    themeNoTokens: '此主题没有设计样式',
+    themeLoadFailed: '加载主题失败',
   },
 
   asset: {
