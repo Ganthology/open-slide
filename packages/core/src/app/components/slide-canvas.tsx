@@ -61,14 +61,17 @@ export function SlideCanvas({
           width: scaledW,
           height: scaledH,
           visibility: measured === null ? 'hidden' : undefined,
+          position: 'absolute',
           ...(center
             ? {
-                position: 'absolute',
                 left: '50%',
                 top: '50%',
                 transform: `translate(-50%, -50%)`,
               }
-            : {}),
+            : {
+                left: 0,
+                top: 0,
+              }),
         }}
       >
         <div
@@ -76,6 +79,9 @@ export function SlideCanvas({
           data-osd-freeze-motion={freezeMotion ? '' : undefined}
           style={
             {
+              position: 'absolute',
+              top: 0,
+              left: 0,
               width: CANVAS_WIDTH,
               height: CANVAS_HEIGHT,
               transform: `scale(${s})`,
